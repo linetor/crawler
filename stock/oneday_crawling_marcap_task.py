@@ -5,6 +5,8 @@ import sys
 from configparser import ConfigParser
 import time
 import logging
+import pandas as pd
+from util import MongoDBSingleton
 
 logger = logging.getLogger(name='marcap data pulling')
 logger.setLevel(logging.INFO)
@@ -13,17 +15,34 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
-def pull_data():
-    return None
 
-def getting_data_from_mongo():
-    return None
+def pull_data(year_str):
+    today_df = pd.read_csv(f"https://github.com/FinanceData/marcap/raw/master/data/marcap-{year_str}.csv.gz")
+    today_df['_id'] = today_df['Code'].astype(str)+"_"+today_df['Date']
+    today_df['filename'] = f"marcap-{year_str}.csv.gz"
+    return today_df
 
-def get_complement_data():
-    return None
+def getting_data_from_mongo(year_str,mongo):
+    cursor = mongo.get_collection().find({"filename": f"marcap-{year_str}.csv.gz"})
+    mongo_df = pd.DataFrame(cursor)
+    cursor.close()
 
-def insert_into_mongo():
-    return None
+    return mongo_df
+
+def get_complement_data(today_df,mongo_df):
+    return today_df[~today_df.isin(mongo_df)].dropna()
+
+def insert_into_mongo(complement_df,):
+
+    data_dict = complement_df.to_dict('records')
+
+    cursor = mongo.get_collection().find({"filename": f"marcap-{year_str}.csv.gz"})
+    mongo_df = pd.DataFrame(cursor)
+
+    insert_cnt = collection.insert_many(data_dict)
+    cursor.close()
+
+    return insert_cnt
 
 
 if __name__ == "__main__":
@@ -34,4 +53,35 @@ if __name__ == "__main__":
     # 3. extract data 1-2
     # 4. insert into mongodb with 3 data
     # 5. TODO : extract mongo-data into redis for dashboard
-    logger.info("marcap data pulling starting")
+    date = datetime.datetime.now()
+    year_str = date.strftime('%Y')
+
+    logger.info("marcap data pulling start")
+
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument('--current_year_str', type=str, default=year_str,
+                            help="current year ")
+    args = arg_parser.parse_args()
+    logger.info(f"arg : {{args.start_time_str}}" )
+
+    logger.info("get mongodb connection start ")
+    mongo = MongoDBSingleton.getInstance("FinanceData")
+    mongo.set_collection('marcap')
+    logger.info("get mongodb connection end ")
+
+    logger.info("pulling data from github ")
+    today_df = pull_data(args.current_year_str)
+
+    logger.info("pulling data cnt : " +str(today_df.shape) )
+
+    logger.info("pulling data from mongodb ")
+    mongo_df = getting_data_from_mongo(args.current_year_str,mongo)
+
+    logger.info("checking insert data ")
+    complement_df = get_complement_data (today_df, mongo_df)
+    logger.info(str(complement_df.shape) + " will be inserted ")
+
+    insert_cnt = insert_into_mongo(complement_df,mongo)
+    logger.info("inserted count : " + insert_cnt)
+
+    logger.info("marcap data pulling end")
