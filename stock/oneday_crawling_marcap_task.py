@@ -32,15 +32,12 @@ def getting_data_from_mongo(year_str,mongo):
 def get_complement_data(today_df,mongo_df):
     return today_df[~today_df.isin(mongo_df)].dropna()
 
-def insert_into_mongo(complement_df,):
+def insert_into_mongo(complement_df,mongo):
 
+
+    collection = mongo.get_collection().find({"filename": f"marcap-{year_str}.csv.gz"})
     data_dict = complement_df.to_dict('records')
-
-    cursor = mongo.get_collection().find({"filename": f"marcap-{year_str}.csv.gz"})
-    mongo_df = pd.DataFrame(cursor)
-
     insert_cnt = collection.insert_many(data_dict)
-    cursor.close()
 
     return insert_cnt
 
