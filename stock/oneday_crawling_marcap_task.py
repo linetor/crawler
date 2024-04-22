@@ -6,7 +6,7 @@ from configparser import ConfigParser
 import time
 import logging
 import pandas as pd
-from util import MongoDBSingleton
+from ..util import MongoDBSingleton
 
 logger = logging.getLogger(name='marcap data pulling')
 logger.setLevel(logging.INFO)
