@@ -6,7 +6,10 @@ from configparser import ConfigParser
 import time
 import logging
 import pandas as pd
-from ..util import MongoDBSingleton
+
+import sys
+sys.path.append('../util')
+from MongoDBSingleton import MongoDBSingleton
 
 logger = logging.getLogger(name='marcap data pulling')
 logger.setLevel(logging.INFO)
@@ -33,11 +36,9 @@ def get_complement_data(today_df,mongo_df):
     return today_df[~today_df.isin(mongo_df)].dropna()
 
 def insert_into_mongo(complement_df,mongo):
-
-
-    collection = mongo.get_collection().find({"filename": f"marcap-{year_str}.csv.gz"})
+    #collection = mongo.get_collection().find({"filename": f"marcap-{year_str}.csv.gz"})
     data_dict = complement_df.to_dict('records')
-    insert_cnt = collection.insert_many(data_dict)
+    insert_cnt = mongo.get_collection().insert_many(data_dict)
 
     return insert_cnt
 
@@ -79,6 +80,6 @@ if __name__ == "__main__":
     logger.info(str(complement_df.shape) + " will be inserted ")
 
     insert_cnt = insert_into_mongo(complement_df,mongo)
-    logger.info("inserted count : " + insert_cnt)
+    logger.info("inserted count : " + str(len(insert_cnt)))
 
     logger.info("marcap data pulling end")
