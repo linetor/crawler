@@ -8,7 +8,9 @@ import logging
 import pandas as pd
 
 import sys
-sys.path.append('../util')
+import os
+current_path = os.path.abspath(__file__)
+sys.path.append("/".join(current_path.split("/")[:-1])+'/../util')
 from MongoDBSingleton import MongoDBSingleton
 
 logger = logging.getLogger(name='marcap data pulling')
@@ -33,7 +35,15 @@ def getting_data_from_mongo(year_str,mongo):
     return mongo_df
 
 def get_complement_data(today_df,mongo_df):
-    return today_df[~today_df.isin(mongo_df)].dropna()
+    #return today_df[~today_df.isin(mongo_df)].dropna()
+    complement_df = pd.merge(
+        today_df,
+        mongo_df[['_id','Code']].rename(columns={"Code":"check_code"}),
+        on='_id',how='left'
+    )
+    complement_df = complement_df[complement_df['check_code'].isnull()][today_df.columns]
+    return complement_df
+
 
 def insert_into_mongo(complement_df,mongo):
     #collection = mongo.get_collection().find({"filename": f"marcap-{year_str}.csv.gz"})
@@ -74,12 +84,13 @@ if __name__ == "__main__":
 
     logger.info("pulling data from mongodb ")
     mongo_df = getting_data_from_mongo(args.current_year_str,mongo)
+    logger.info("data from mongodb : " + str(mongo_df.shape))
 
     logger.info("checking insert data ")
     complement_df = get_complement_data (today_df, mongo_df)
     logger.info(str(complement_df.shape) + " will be inserted ")
 
     insert_cnt = insert_into_mongo(complement_df,mongo)
-    logger.info("inserted count : " + str(len(insert_cnt)))
+    logger.info("inserted count : " + str(len(insert_cnt.inserted_ids)))
 
     logger.info("marcap data pulling end")
