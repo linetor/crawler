@@ -50,9 +50,10 @@ def get_complement_data(today_df,mongo_df):
 def insert_into_mongo(complement_df,mongo):
     #collection = mongo.get_collection().find({"filename": f"marcap-{year_str}.csv.gz"})
     data_dict = complement_df.to_dict('records')
+    if len(data_dict) == 0:
+        return 0
     insert_cnt = mongo.get_collection().insert_many(data_dict)
-
-    return insert_cnt
+    return len(insert_cnt.inserted_ids)
 
 
 if __name__ == "__main__":
@@ -93,6 +94,6 @@ if __name__ == "__main__":
     logger.info(str(complement_df.shape) + " will be inserted ")
 
     insert_cnt = insert_into_mongo(complement_df,mongo)
-    logger.info("inserted count : " + str(len(insert_cnt.inserted_ids)))
+    logger.info("inserted count : " + str(insert_cnt))
 
     logger.info("marcap data pulling end")
