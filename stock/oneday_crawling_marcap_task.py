@@ -36,6 +36,8 @@ def getting_data_from_mongo(year_str,mongo):
 
 def get_complement_data(today_df,mongo_df):
     #return today_df[~today_df.isin(mongo_df)].dropna()
+    if mongo_df.empty:
+        return today_df
     complement_df = pd.merge(
         today_df,
         mongo_df[['_id','Code']].rename(columns={"Code":"check_code"}),
