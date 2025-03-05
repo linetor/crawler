@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     logger.info("get mongodb singleton instance ")
     mongo = MongoDBSingleton.getInstance("krx_api_db")
-    api_description = get_mongo_collection(postgres)
+    api_description = get_api_description(postgres)
 
 
     logger.info("insert into mongodb using api")
