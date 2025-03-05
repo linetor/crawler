@@ -61,7 +61,7 @@ def get_api_description(postgres):
         api_detail[api_index][api_name][en_name] = kr_name
     return api_detail
 
-def insert_into_mongo_with_api_result(mongo_collection,api_detail,mongo_db):
+def insert_into_mongo_with_api_result(mongo_collection,api_detail,mongo_db,headers,params):
     insert_cnt = 0
     for collcection_name in mongo_collection:
         logger.info(f"colleciton name : {collcection_name}")
@@ -112,9 +112,15 @@ if __name__ == "__main__":
     mongo = MongoDBSingleton.getInstance("krx_api_db")
     api_description = get_api_description(postgres)
 
-
+    logger.info("set headers and params")
+    headers = {
+        "AUTH_KEY":  get_vault_configuration('krx_api')['token']
+    }
+    params = {
+        "basDd": args.before_date  # 조회하고자 하는 날짜 (YYYYMMDD 형식)
+    }
     logger.info("insert into mongodb using api")
-    result = insert_into_mongo_with_api_result(mongo_collection,api_description,mongo)
+    result = insert_into_mongo_with_api_result(mongo_collection,api_description,mongo,headers,params)
 
     logger.info(f"insert document count : {result}")
 
