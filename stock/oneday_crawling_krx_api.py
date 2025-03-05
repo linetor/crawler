@@ -13,8 +13,8 @@ import os
 
 current_path = os.path.abspath(__file__)
 sys.path.append("/".join(current_path.split("/")[:-1])+'/../util')
-from util.MongoDBSingleton import MongoDBSingleton
-from util import PostgresSingleton
+from MongoDBSingleton import MongoDBSingleton
+from PostgresSingleton import PostgresSingleton
 
 logger = logging.getLogger(name='krx api data crawling')
 logger.setLevel(logging.INFO)
