@@ -71,6 +71,9 @@ def insert_into_mongo_with_api_result(mongo_collection,api_detail,mongo_db,heade
             logger.info(f"\turl : {url}")
             response = requests.get(url, headers=headers, params=params)
             result = response.json()
+            if(len(response.json()['OutBlock_1'])==0):
+                logger.info(f"\tresult is empty")
+                continue
             result = mongo_db.get_collection().insert_many(result['OutBlock_1'])
             insert_cnt += len(result.inserted_ids)
             logger.info(f"\tinsert count : {len(result.inserted_ids)}")
