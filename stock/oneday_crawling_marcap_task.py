@@ -73,7 +73,7 @@ if __name__ == "__main__":
     arg_parser.add_argument('--current_year_str', type=str, default=year_str,
                             help="current year ")
     args = arg_parser.parse_args()
-    logger.info(f"arg : {{args.start_time_str}}" )
+    logger.info(f"arg : {args.current_year_str}" )
 
     logger.info("get mongodb connection start ")
     mongo = MongoDBSingleton.getInstance("FinanceData")
