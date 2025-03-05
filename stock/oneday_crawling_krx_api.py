@@ -86,15 +86,15 @@ if __name__ == "__main__":
     # 2. api data 수집
     # 3. end
     date = datetime.datetime.now()- datetime.timedelta(days=1)
-    data_str = date.strftime('%Y%m%d')
+    date_str = date.strftime('%Y%m%d')
 
     logger.info("marcap data pulling start")
 
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('--current_date', type=str, default=data_str,
-                            help="current date ")
+    arg_parser.add_argument('--before_date', type=str, default=date_str,
+                            help="before date ")
     args = arg_parser.parse_args()
-    logger.info(f"arg : {args.current_date}" )
+    logger.info(f"arg : {args.before_date}" )
 
     logger.info("get postgre information ")
     krx_api_db =  get_vault_configuration('krx_api_db')
