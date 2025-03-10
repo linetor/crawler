@@ -74,7 +74,12 @@ def insert_into_mongo_with_api_result(mongo_collection,api_detail,mongo_db,heade
             if(len(response.json()['OutBlock_1'])==0):
                 logger.info(f"\tresult is empty")
                 continue
-            result = mongo_db.get_collection().insert_many(result['OutBlock_1'])
+            fillWithApiName = []
+            for resultDictonary in result['OutBlock_1']:
+                resultDictonary['api_name'] = api_name
+                fillWithApiName.append(resultDictonary)
+            result = mongo_db.get_collection().insert_many(fillWithApiName)
+
             insert_cnt += len(result.inserted_ids)
             logger.info(f"\tinsert count : {len(result.inserted_ids)}")
     return insert_cnt
