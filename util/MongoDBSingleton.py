@@ -43,7 +43,7 @@ class MongoDBSingleton:
             MongoDBSingleton.__instance = self
 
             self.client = MongoClient(f'mongodb://{id}:{passwd}@{ssh_ip}:27017/')  # 여기에 MongoDB 접속 정보를 넣어주세요.
-            self.db = self.client['database_name']  # 여기에 사용할 데이터베이스명을 넣어주세요.
+            self.db = self.client[database_name]  # 여기에 사용할 데이터베이스명을 넣어주세요.
             self.collection = None
 
     def set_collection(self, collection_name):
