@@ -62,7 +62,9 @@ def get_api_description(postgres):
     return api_detail
 
 def insert_into_mongo_with_api_result(mongo_collection,api_detail,mongo_db,headers,params):
-    insert_cnt = 0
+    from pymongo import UpdateOne
+    effected_cnt = 0
+
     for collcection_name in mongo_collection:
         logger.info(f"colleciton name : {collcection_name}")
         mongo_db.set_collection(collcection_name)
@@ -74,15 +76,30 @@ def insert_into_mongo_with_api_result(mongo_collection,api_detail,mongo_db,heade
             if(len(response.json()['OutBlock_1'])==0):
                 logger.info(f"\tresult is empty")
                 continue
+
             fillWithApiName = []
             for resultDictonary in result['OutBlock_1']:
                 resultDictonary['api_name'] = api_name
                 fillWithApiName.append(resultDictonary)
-            result = mongo_db.get_collection().insert_many(fillWithApiName)
 
-            insert_cnt += len(result.inserted_ids)
-            logger.info(f"\tinsert count : {len(result.inserted_ids)}")
-    return insert_cnt
+            if 'BAS_DD' in api_detail[collcection_name][api_name]:
+                result = mongo_db.get_collection().insert_many(fillWithApiName)
+                effected_cnt = result.inserted_ids
+            else:
+                bulk_operations = [
+                    UpdateOne({"ISU_CD": doc["ISU_CD"]},  # 기준 필드
+                            {"$set": doc},  # 업데이트할 데이터
+                            upsert=True  # 문서가 없으면 삽입
+                            )
+                    for doc in fillWithApiName
+                    ]
+                if bulk_operations:
+                    result = mongo_db.get_collection().bulk_write(bulk_operations, ordered=False)
+                    effected_cnt = result.modified_count + result.upserted_count
+            #
+            logger.info(f"\tinsert count : {effected_cnt}")
+
+    return effected_cnt
 
 
 
