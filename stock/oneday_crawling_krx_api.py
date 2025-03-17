@@ -75,6 +75,7 @@ def insert_into_mongo_with_api_result(mongo_collection,api_detail,mongo_db,heade
             result = response.json()
             if(len(response.json()['OutBlock_1'])==0):
                 logger.info(f"\tresult is empty")
+                effected_cnt=0
                 continue
 
             fillWithApiName = []
@@ -84,7 +85,7 @@ def insert_into_mongo_with_api_result(mongo_collection,api_detail,mongo_db,heade
 
             if 'BAS_DD' in api_detail[collcection_name][api_name]:
                 result = mongo_db.get_collection().insert_many(fillWithApiName)
-                effected_cnt = result.inserted_ids
+                effected_cnt = len(result.inserted_ids)
             else:
                 bulk_operations = [
                     UpdateOne({"ISU_CD": doc["ISU_CD"]},  # 기준 필드
