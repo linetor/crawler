@@ -22,13 +22,30 @@ logger.addHandler(stream_handler)
 
 
 def pull_data(year_str):
-    today_df = pd.read_csv(f"https://github.com/FinanceData/marcap/raw/master/data/marcap-{year_str}.csv.gz")
-    today_df['_id'] = today_df['Code'].astype(str)+"_"+today_df['Date']
-    today_df['filename'] = f"marcap-{year_str}.csv.gz"
+    today_df = pd.read_parquet(f"https://github.com/FinanceData/marcap/raw/master/data/marcap-{year_str}.parquet")
+    # The csv.gz source left Date as a plain 'YYYY-MM-DD' string, but parquet
+    # types it as datetime64, so concatenating it raised TypeError. Normalize
+    # through to_datetime (accepts either dtype) and format back to the exact
+    # same string, so _id keeps matching the documents already in MongoDB.
+    date_key = pd.to_datetime(today_df['Date']).dt.strftime('%Y-%m-%d')
+    today_df['_id'] = today_df['Code'].astype(str) + "_" + date_key
+    today_df['filename'] = f"marcap-{year_str}.parquet"
     return today_df
 
 def getting_data_from_mongo(year_str,mongo):
-    cursor = mongo.get_collection().find({"filename": f"marcap-{year_str}.csv.gz"})
+    # 문서 전체(20컬럼)를 가져오면 안 된다. 호출부 get_complement_data 는
+    # mongo_df[[_id,Code]] 만 쓰는데, 전체를 끌어오면 rasp4 에서 394,707건
+    # 적재에 10분 이상 걸려 SSH cmd_timeout(1800s)을 넘겼다. 2026-07-27 에
+    # csv.gz -> parquet 로 옮기며 대상 문서가 늘어난 뒤 07-29 부터 매일 실패했다.
+    # projection 으로 두 컬럼만 받으면 같은 데이터가 7.7초에 들어온다(실측).
+    #
+    # filename 은 확장자만 다르므로 정확 일치 두 개를 $in 으로 묶는다. 앵커 없는
+    # $regex 와 결과는 같지만(2026년은 parquet 394,707건뿐, csv.gz 0건) 의도가
+    # 분명하고 조금 더 빠르다. filename 인덱스는 없으므로 어느 쪽이든 스캔이다.
+    cursor = mongo.get_collection().find(
+        {"filename": {"$in": [f"marcap-{year_str}.csv.gz", f"marcap-{year_str}.parquet"]}},
+        {"_id": 1, "Code": 1},
+    )
     mongo_df = pd.DataFrame(cursor)
     cursor.close()
 
@@ -72,8 +89,11 @@ if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('--current_year_str', type=str, default=year_str,
                             help="current year ")
+    arg_parser.add_argument('--date', type=str, help="target date in YYYYMMDD format")
     args = arg_parser.parse_args()
-    logger.info(f"arg : {args.current_year_str}" )
+    
+    target_year = args.date[:4] if args.date else args.current_year_str
+    logger.info(f"arg : {target_year}" )
 
     logger.info("get mongodb connection start ")
     mongo = MongoDBSingleton.getInstance("FinanceData")
@@ -81,12 +101,12 @@ if __name__ == "__main__":
     logger.info("get mongodb connection end ")
 
     logger.info("pulling data from github ")
-    today_df = pull_data(args.current_year_str)
+    today_df = pull_data(target_year)
 
     logger.info("pulling data cnt : " +str(today_df.shape) )
 
     logger.info("pulling data from mongodb ")
-    mongo_df = getting_data_from_mongo(args.current_year_str,mongo)
+    mongo_df = getting_data_from_mongo(target_year,mongo)
     logger.info("data from mongodb : " + str(mongo_df.shape))
 
     logger.info("checking insert data ")
