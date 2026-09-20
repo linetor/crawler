@@ -1,7 +1,11 @@
 from pymongo import MongoClient
 
 import os
+from urllib.parse import quote_plus
+
 import requests
+
+
 def get_vault_configuration(endpoint):
     vault_addr = os.environ.get("VAULT_ADDR")
     vault_token = os.environ.get("VAULT_TOKEN")
@@ -9,7 +13,7 @@ def get_vault_configuration(endpoint):
 
     # HTTP GET 요청을 통해 데이터를 가져옵니다.
     headers = {"X-Vault-Token": vault_token}
-    response = requests.get(endpoint, headers=headers)
+    response = requests.get(endpoint, headers=headers, timeout=10)
 
     if response.status_code == 200:
         data = response.json()
@@ -18,6 +22,22 @@ def get_vault_configuration(endpoint):
     else:
         # 에러 응답의 경우 예외를 발생시킵니다.
         response.raise_for_status()
+
+
+def _build_mongo_uri():
+    """Mongo 접속 URI를 kv/mongodb 전용 자격증명으로 만든다."""
+    info = get_vault_configuration("mongodb")
+    required = ("user", "password", "host")
+    missing = [key for key in required if not info.get(key)]
+    if missing:
+        raise ValueError(f"kv/mongodb 필수 필드 누락: {', '.join(missing)}")
+    user = quote_plus(str(info["user"]))
+    password = quote_plus(str(info["password"]))
+    host = str(info["host"])
+    port = int(info.get("port", 27017))
+    auth_source = quote_plus(str(info.get("authSource") or "admin"))
+    return f"mongodb://{user}:{password}@{host}:{port}/?authSource={auth_source}"
+
 
 class MongoDBSingleton:
     __instance = None
@@ -35,14 +55,11 @@ class MongoDBSingleton:
             raise Exception("싱글톤 클래스입니다. 사용하세요.")
         else:
 
-            ssh_info = get_vault_configuration("ssh")
-            ssh_ip = ssh_info['ssh_ip']['odroid']
-            id = ssh_info['ssh_id']
-            passwd = ssh_info['ssh_pass']
+            uri = _build_mongo_uri()
 
             MongoDBSingleton.__instance = self
 
-            self.client = MongoClient(f'mongodb://{id}:{passwd}@{ssh_ip}:27017/')  # 여기에 MongoDB 접속 정보를 넣어주세요.
+            self.client = MongoClient(uri)
             self.db = self.client[database_name]  # 여기에 사용할 데이터베이스명을 넣어주세요.
             self.collection = None
 
