@@ -1,14 +1,10 @@
-import subprocess
-import datetime
 import argparse
-import sys
-from configparser import ConfigParser
-import time
+import datetime
 import logging
-import pandas as pd
-
-import sys
 import os
+import sys
+
+import pandas as pd
 current_path = os.path.abspath(__file__)
 sys.path.append("/".join(current_path.split("/")[:-1])+'/../util')
 from MongoDBSingleton import MongoDBSingleton
@@ -91,7 +87,7 @@ if __name__ == "__main__":
                             help="current year ")
     arg_parser.add_argument('--date', type=str, help="target date in YYYYMMDD format")
     args = arg_parser.parse_args()
-    
+
     target_year = args.date[:4] if args.date else args.current_year_str
     logger.info(f"arg : {target_year}" )
 
